@@ -67,6 +67,7 @@ Register a new user account.
 **Auth:** None (public)
 
 **Body:**
+
 ```json
 {
   "username": "john",
@@ -76,6 +77,7 @@ Register a new user account.
 ```
 
 **Response (201):**
+
 ```json
 {
   "id": 1,
@@ -94,6 +96,7 @@ Login and receive a JWT token.
 **Auth:** None (public)
 
 **Body:**
+
 ```json
 {
   "email": "john@example.com",
@@ -102,6 +105,7 @@ Login and receive a JWT token.
 ```
 
 **Response (201):**
+
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIs..."
@@ -119,6 +123,7 @@ Get current user info from the JWT token.
 **Auth:** Bearer token
 
 **Response (200):**
+
 ```json
 {
   "success": true,
@@ -142,6 +147,7 @@ Start a new interview session.
 **Auth:** Bearer token
 
 **Body:**
+
 ```json
 {
   "title": "Node.js Backend Interview",
@@ -153,6 +159,7 @@ Start a new interview session.
 `difficulty` must be one of: `"junior"`, `"mid"`, `"senior"`
 
 **Response (201):**
+
 ```json
 {
   "id": "a1b2c3d4-...",
@@ -178,6 +185,7 @@ Request a new question to be generated for the interview.
 **⚠️ The question is generated asynchronously!** The response will have `question: null` and `status: "generating"`. You must poll `GET /api/interviews/:interviewId` to see when the question is ready.
 
 **Response (201):**
+
 ```json
 {
   "id": "item-uuid-...",
@@ -192,6 +200,7 @@ Request a new question to be generated for the interview.
 ```
 
 After ~2-5 seconds, polling the interview will show:
+
 ```json
 {
   "id": "item-uuid-...",
@@ -213,10 +222,12 @@ Submit an answer for a specific question.
 **Auth:** Bearer token
 
 **Prerequisites:**
+
 - The question's status must be `"awaiting_answer"` (not `"generating"`)
 - The question must not have been answered already
 
 **Body:**
+
 ```json
 {
   "answer": "The event loop is a mechanism in Node.js that allows it to perform non-blocking I/O operations. It uses a single thread with an event queue..."
@@ -224,6 +235,7 @@ Submit an answer for a specific question.
 ```
 
 **Response (200):**
+
 ```json
 {
   "id": "item-uuid-...",
@@ -244,7 +256,10 @@ Submit an answer for a specific question.
   "answer": "The event loop is a mechanism...",
   "evaluation": {
     "score": 7,
-    "strengths": ["Good understanding of single-threaded model", "Mentioned non-blocking I/O"],
+    "strengths": [
+      "Good understanding of single-threaded model",
+      "Mentioned non-blocking I/O"
+    ],
     "weaknesses": ["Didn't mention microtask queue", "No mention of libuv"],
     "correctness": "Partially correct"
   },
@@ -262,10 +277,12 @@ End the interview session and calculate the overall score.
 **Auth:** Bearer token
 
 **Prerequisites:**
+
 - All questions must be in `"awaiting_answer"` or `"completed"` status
 - No questions can be in `"generating"` or `"processing"` status
 
 **Response (200):**
+
 ```json
 {
   "id": "a1b2c3d4-...",
@@ -288,6 +305,7 @@ List all interviews for the current user.
 **Auth:** Bearer token
 
 **Response (200):**
+
 ```json
 [
   {
@@ -313,6 +331,7 @@ Get a single interview with all its questions/items.
 **This is the polling endpoint!** Use it to check the status of questions after generating them or submitting answers.
 
 **Response (200):**
+
 ```json
 {
   "id": "a1b2c3d4-...",
@@ -329,7 +348,12 @@ Get a single interview with all its questions/items.
       "id": "item-uuid-...",
       "question": "Explain the event loop in Node.js...",
       "answer": "The event loop is...",
-      "evaluation": { "score": 7, "strengths": [], "weaknesses": [], "correctness": "..." },
+      "evaluation": {
+        "score": 7,
+        "strengths": [],
+        "weaknesses": [],
+        "correctness": "..."
+      },
       "feedback": "Your answer demonstrates...",
       "status": "completed",
       "order": 0
@@ -355,9 +379,10 @@ These endpoints call the AI directly **without** creating an interview session. 
 
 #### `POST /api/ai/generate-question`
 
-**Auth:** Bearer token
+**Auth:** No Auth Marked As Public()
 
 **Body:**
+
 ```json
 {
   "topic": "React",
@@ -366,6 +391,7 @@ These endpoints call the AI directly **without** creating an interview session. 
 ```
 
 **Response (200):**
+
 ```json
 {
   "question": "Explain the reconciliation algorithm in React..."
@@ -376,9 +402,10 @@ These endpoints call the AI directly **without** creating an interview session. 
 
 #### `POST /api/ai/evaluate-answer`
 
-**Auth:** Bearer token
+**Auth:** No Auth Marked As Public()
 
 **Body:**
+
 ```json
 {
   "question": "Explain the reconciliation algorithm in React...",
@@ -387,6 +414,7 @@ These endpoints call the AI directly **without** creating an interview session. 
 ```
 
 **Response (200):**
+
 ```json
 {
   "evaluation": {
@@ -402,9 +430,10 @@ These endpoints call the AI directly **without** creating an interview session. 
 
 #### `POST /api/ai/generate-feedback`
 
-**Auth:** Bearer token
+**Auth:** No Auth Marked As Public()
 
 **Body:**
+
 ```json
 {
   "question": "Explain the reconciliation algorithm in React...",
@@ -413,6 +442,7 @@ These endpoints call the AI directly **without** creating an interview session. 
 ```
 
 **Response (200):**
+
 ```json
 {
   "feedback": "Your answer shows a solid understanding of React's core rendering mechanism..."
@@ -430,6 +460,7 @@ List all completed interviews as reports. Cached for 60 seconds.
 **Auth:** Bearer token
 
 **Response (200):**
+
 ```json
 [
   {
@@ -453,6 +484,7 @@ Get a detailed report for a completed interview. Cached for 5 minutes.
 **Auth:** Bearer token
 
 **Response (200):**
+
 ```json
 {
   "id": "a1b2c3d4-...",
@@ -466,7 +498,12 @@ Get a detailed report for a completed interview. Cached for 5 minutes.
       "id": "item-uuid-...",
       "question": "Explain the event loop in Node.js...",
       "answer": "The event loop is...",
-      "evaluation": { "score": 7, "strengths": [], "weaknesses": [], "correctness": "..." },
+      "evaluation": {
+        "score": 7,
+        "strengths": [],
+        "weaknesses": [],
+        "correctness": "..."
+      },
       "feedback": "Your answer demonstrates...",
       "status": "completed",
       "order": 0
@@ -483,10 +520,10 @@ Get a detailed report for a completed interview. Cached for 5 minutes.
 
 The interview system uses **BullMQ** (background job queue) for AI operations. This means:
 
-| Operation | Endpoint | What happens in background | What to poll |
-|---|---|---|---|
-| Generate question | `POST /interviews/:id/questions` | AI generates the question | Poll `GET /interviews/:id` until item status = `awaiting_answer` |
-| Submit answer | `POST /interviews/:id/questions/:itemId/answer` | AI evaluates + generates feedback | Poll `GET /interviews/:id` until item status = `completed` |
+| Operation         | Endpoint                                        | What happens in background        | What to poll                                                     |
+| ----------------- | ----------------------------------------------- | --------------------------------- | ---------------------------------------------------------------- |
+| Generate question | `POST /interviews/:id/questions`                | AI generates the question         | Poll `GET /interviews/:id` until item status = `awaiting_answer` |
+| Submit answer     | `POST /interviews/:id/questions/:itemId/answer` | AI evaluates + generates feedback | Poll `GET /interviews/:id` until item status = `completed`       |
 
 ### Item Status Flow
 
@@ -571,13 +608,14 @@ curl http://localhost:3000/api/reports/$INTERVIEW_ID \
 
 ## Error Responses
 
-| Status | Meaning |
-|---|---|
-| `400` | Bad request — e.g., question still generating, already answered, items still processing |
-| `401` | Unauthorized — missing or expired JWT token |
-| `404` | Not found — interview or question doesn't exist or doesn't belong to you |
+| Status | Meaning                                                                                 |
+| ------ | --------------------------------------------------------------------------------------- |
+| `400`  | Bad request — e.g., question still generating, already answered, items still processing |
+| `401`  | Unauthorized — missing or expired JWT token                                             |
+| `404`  | Not found — interview or question doesn't exist or doesn't belong to you                |
 
 Common error response format:
+
 ```json
 {
   "statusCode": 400,
