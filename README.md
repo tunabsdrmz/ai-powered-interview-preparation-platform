@@ -1,98 +1,301 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+<div align="center">
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+# AI-Powered Interview Preparation Platform
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+**A scalable backend for generating technical interview questions, asynchronously evaluating answers, and delivering structured AI coaching feedback.**
 
-## Description
+[![NestJS](https://img.shields.io/badge/NestJS-11-E0234E?logo=nestjs)](https://nestjs.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Redis](https://img.shields.io/badge/Redis-Cache%20%26%20Queue-DC382D?logo=redis&logoColor=white)](https://redis.io/)
+[![BullMQ](https://img.shields.io/badge/BullMQ-Async%20Jobs-EA580C)](https://docs.bullmq.io/)
+[![Groq](https://img.shields.io/badge/Groq-AI%20Inference-F55036)](https://groq.com/)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+</div>
 
-## Project setup
+## Overview
 
-```bash
-$ npm install
+AI-Powered Interview Preparation Platform is a REST API that simulates role-specific technical interview sessions. Users can create an account, start an interview by topic and difficulty, receive AI-generated questions, submit answers, and review structured evaluations and coaching feedback.
+
+Long-running AI operations are processed asynchronously with **BullMQ and Redis**, keeping HTTP requests responsive while question generation and answer evaluation continue in background workers. Interview data and reports are persisted in **PostgreSQL**, while report responses are cached in **Redis**.
+
+## Key Features
+
+- JWT-based registration, login, and protected user routes
+- Technical question generation by topic and difficulty
+- Junior, mid-level, and senior interview modes
+- Asynchronous AI processing with BullMQ workers
+- Parallel answer evaluation and feedback generation
+- Structured scoring, strengths, weaknesses, and correctness results
+- Persistent interview sessions and question history
+- User-scoped interview access and report retrieval
+- Redis-backed report caching and cache invalidation
+- Input validation with `class-validator`
+- Interactive Swagger API documentation
+
+## Architecture
+
+```mermaid
+flowchart LR
+    Client[Client / Swagger UI] --> API[NestJS REST API]
+    API --> Auth[JWT Authentication]
+    API --> Interview[Interview Service]
+    API --> Report[Report Service]
+
+    Interview --> DB[(PostgreSQL)]
+    Report --> DB
+    Report --> Cache[(Redis Cache)]
+
+    Interview --> Queue[BullMQ Queue]
+    Queue --> Worker[Interview Worker]
+    Worker --> AI[AI Service]
+    AI --> Groq[Groq API / Llama 3.1]
+    Worker --> DB
 ```
 
-## Compile and run the project
+## Interview Workflow
 
-```bash
-# development
-$ npm run start
+```mermaid
+sequenceDiagram
+    actor User
+    participant API as NestJS API
+    participant DB as PostgreSQL
+    participant Queue as BullMQ
+    participant Worker as Interview Worker
+    participant AI as Groq API
 
-# watch mode
-$ npm run start:dev
+    User->>API: Start interview
+    API->>DB: Create interview session
+    API-->>User: Interview ID
 
-# production mode
-$ npm run start:prod
+    User->>API: Request next question
+    API->>DB: Create item (generating)
+    API->>Queue: Enqueue generate-question job
+    API-->>User: Item with generating status
+
+    Queue->>Worker: Process job
+    Worker->>AI: Generate technical question
+    AI-->>Worker: Question text
+    Worker->>DB: Update item (awaiting_answer)
+
+    User->>API: Submit answer
+    API->>DB: Update item (processing)
+    API->>Queue: Enqueue process-answer job
+
+    Queue->>Worker: Process job
+    par Parallel AI operations
+        Worker->>AI: Evaluate answer
+        Worker->>AI: Generate coaching feedback
+    end
+    AI-->>Worker: Evaluation and feedback
+    Worker->>DB: Update item (completed)
+
+    User->>API: End interview
+    API->>DB: Calculate and save overall score
+    API-->>User: Completed interview
 ```
 
-## Run tests
+## Technology Stack
 
-```bash
-# unit tests
-$ npm run test
+| Area                | Technologies                                |
+| ------------------- | ------------------------------------------- |
+| Runtime & framework | Node.js, NestJS 11, TypeScript              |
+| Database            | PostgreSQL, TypeORM                         |
+| Queue processing    | BullMQ, Redis                               |
+| Caching             | NestJS Cache Manager, Redis                 |
+| AI integration      | Groq SDK, Llama 3.1 8B Instant              |
+| Authentication      | Passport, JWT, bcrypt                       |
+| Validation & docs   | class-validator, class-transformer, Swagger |
 
-# e2e tests
-$ npm run test:e2e
+## Project Structure
 
-# test coverage
-$ npm run test:cov
+```text
+src/
+├── ai/          # Prompt orchestration and AI use cases
+├── auth/        # JWT authentication, guards, decorators, strategies
+├── groq/        # Groq SDK integration
+├── interview/   # Interview sessions, entities, queue producer and worker
+├── report/      # Completed interview reports and Redis caching
+├── user/        # User persistence and profile endpoints
+├── app.module.ts
+└── main.ts
 ```
 
-## Deployment
+## Prerequisites
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+- Node.js 20+
+- npm
+- PostgreSQL 15+
+- Redis 7+
+- A Groq API key
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Docker is optional but recommended for local PostgreSQL and Redis services.
+
+## Getting Started
+
+### 1. Clone the repository
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+git clone https://github.com/tunabsdrmz/ai-powered-interview-preparation-platform.git
+cd ai-powered-interview-preparation-platform
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### 2. Install dependencies
 
-## Resources
+```bash
+npm install
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+### 3. Configure environment variables
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```bash
+cp .env.example .env
+```
 
-## Support
+Update `.env` with your own credentials:
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```env
+PORT=3000
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/interview_platform
+REDIS_HOST=localhost
+REDIS_PORT=6379
+JWT_SECRET=replace-with-a-long-random-secret
+GROQ_API_KEY=your-groq-api-key
+```
 
-## Stay in touch
+### 4. Start PostgreSQL and Redis
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+Using Docker Compose:
+
+```bash
+docker compose up -d
+```
+
+Or use locally installed PostgreSQL and Redis instances matching your `.env` configuration.
+
+### 5. Run the application
+
+```bash
+npm run start:dev
+```
+
+The API will be available at:
+
+```text
+http://localhost:3000/api
+```
+
+Swagger documentation:
+
+```text
+http://localhost:3000/swagger
+```
+
+## API Overview
+
+| Method | Endpoint                                                | Description                                   | Authentication |
+| ------ | ------------------------------------------------------- | --------------------------------------------- | -------------- |
+| `POST` | `/api/auth/register`                                    | Create a user account                         | Public         |
+| `POST` | `/api/auth/login`                                       | Log in and receive a JWT                      | Public         |
+| `GET`  | `/api/user/me`                                          | Get the authenticated user                    | Required       |
+| `POST` | `/api/interviews/start`                                 | Start an interview session                    | Required       |
+| `POST` | `/api/interviews/:interviewId/questions`                | Queue the next AI-generated question          | Required       |
+| `POST` | `/api/interviews/:interviewId/questions/:itemId/answer` | Submit an answer for processing               | Required       |
+| `POST` | `/api/interviews/:interviewId/end`                      | Complete an interview and calculate its score | Required       |
+| `GET`  | `/api/interviews`                                       | List the user's interviews                    | Required       |
+| `GET`  | `/api/interviews/:id`                                   | Get an interview and its items                | Required       |
+| `GET`  | `/api/reports`                                          | List completed interview reports              | Required       |
+| `GET`  | `/api/reports/:id`                                      | Get a completed report                        | Required       |
+
+Detailed request and response examples are available in [API_DOCS.md](./API_DOCS.md).
+
+## Asynchronous Status Model
+
+Question generation and answer processing are asynchronous. Clients should poll the interview detail endpoint until the item reaches the expected state.
+
+```text
+generating → awaiting_answer → processing → completed
+```
+
+| Status            | Meaning                                        |
+| ----------------- | ---------------------------------------------- |
+| `generating`      | The question generation job is running         |
+| `awaiting_answer` | The generated question is ready                |
+| `processing`      | The submitted answer is being evaluated        |
+| `completed`       | Evaluation and coaching feedback are available |
+
+## Example Interview Session
+
+### Start an interview
+
+```bash
+curl -X POST http://localhost:3000/api/interviews/start \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Backend Developer Practice",
+    "topic": "NestJS",
+    "difficulty": "mid"
+  }'
+```
+
+### Generate the next question
+
+```bash
+curl -X POST http://localhost:3000/api/interviews/<interview_id>/questions \
+  -H "Authorization: Bearer <access_token>"
+```
+
+### Submit an answer
+
+```bash
+curl -X POST \
+  http://localhost:3000/api/interviews/<interview_id>/questions/<item_id>/answer \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "answer": "NestJS guards run before route handlers and are commonly used for authorization..."
+  }'
+```
+
+## Available Scripts
+
+```bash
+npm run start:dev   # Start in watch mode
+npm run build       # Compile the application
+npm run start:prod  # Run the compiled application
+npm run lint        # Run ESLint and apply safe fixes
+npm run format      # Format TypeScript files with Prettier
+npm run test        # Run unit tests
+npm run test:cov    # Generate test coverage
+```
+
+> The repository currently does not include an automated test suite. Adding unit and integration tests is part of the planned improvements.
+
+## Roadmap
+
+- [ ] Unit and integration test coverage
+- [ ] Docker image for the API service
+- [ ] TypeORM migrations and production-safe database configuration
+- [ ] BullMQ retry, backoff, and failed-job handling
+- [ ] Runtime validation for structured AI evaluation output
+- [ ] Rate limiting for AI-backed endpoints
+- [ ] Frontend dashboard for interview sessions and reports
+- [ ] CI pipeline for linting, testing, and builds
+
+## Security Notes
+
+- Never commit `.env` or expose `GROQ_API_KEY` and `JWT_SECRET`.
+- Use a strong, unique JWT secret in deployed environments.
+- Disable TypeORM schema synchronization and use migrations in production.
+- Protect or rate-limit standalone AI endpoints before public deployment.
+
+## Author
+
+**Tuna Boşdurmaz**
+
+- GitHub: [@tunabsdrmz](https://github.com/tunabsdrmz)
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+No open-source license is currently specified for this repository.
